@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Data Explorer - Nested Toggle</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b;
+            padding: 40px 0;
+        }
+        .main-card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+            background: white;
+        }
+        .card-header-custom {
+            background: #1e293b;
+            padding: 30px;
+            color: white;
+            border-radius: 20px 20px 0 0;
+        }
+        /* Styling Detail Baris Utama */
+        .sub-row-wrapper {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 10px;
+        }
+        /* Styling untuk Sub-Toggle (Accordion-like) */
+        .nested-toggle-btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 5px;
+            transition: 0.2s;
+        }
+        .nested-toggle-btn:hover { background: #cbd5e1; }
+        .nested-content {
+            display: none; /* Default tertutup */
+            margin-left: 20px;
+            border-left: 2px solid #cbd5e1;
+            padding-left: 15px;
+            padding-top: 5px;
+        }
+        .json-item {
+            display: flex;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.03);
+        }
+        .json-key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #6366f1;
+            font-weight: 600;
+            width: 200px;
+            flex-shrink: 0;
+        }
+        .json-val {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: #334155;
+            word-break: break-all;
+        }
+        .badge-active { background-color: #dcfce7; color: #15803d; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-inactive { background-color: #fee2e2; color: #b91c1c; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .btn-main-detail { font-size: 12px; border-radius: 8px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="main-card card">
+        <div class="card-header-custom d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-1">User Metadata Explorer</h4>
+                <p class="mb-0 small opacity-75">Visualisasi seluruh hirarki data dari "titik dua"</p>
+            </div>
+            <button class="btn btn-outline-light btn-sm" onclick="location.reload()">Reset File</button>
+        </div>
+        
+        <div class="card-body p-4">
+            <div id="uploadZone" class="text-center p-5 border border-2 border-dashed rounded-4 mb-4 bg-light" 
+                 onclick="document.getElementById('fileInput').click()" style="cursor:pointer">
+                <h5 class="text-primary">Pilih atau Seret File Data Pengguna2.txt</h5>
+                <p class="text-muted small">Tampilan live akan muncul otomatis setelah file dimuat</p>
+                <input type="file" id="fileInput" accept=".txt" style="display:none">
+            </div>
+
+            <div id="tableContainer" style="display:none">
+                <div class="table-responsive">
+                    <table id="mainTable" class="table table-hover align-middle w-100">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>ID</th>
+                                <th>Nama</th>
+                                <th>Username</th>
+                                <th>Unit Kerja</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+// Fungsi rekursif untuk membuat elemen detail yang bisa dibuka-tutup
+function generateNestedUI(obj) {
+    let html = '<div class="nested-wrapper">';
+    for (let key in obj) {
+        if (!obj.hasOwnProperty(key)) continue;
+        let val = obj[key];
+
+        if (val !== null && typeof val === 'object') {
+            // Bagian yang bisa dibuka-tutup (Sub-objek)
+            html += `
+                <div class="mt-2">
+                    <button class="nested-toggle-btn" onclick="toggleNested(this)">+ ${key}</button>
+                    <div class="nested-content">
+                        ${generateNestedUI(val)}
+                    </div>
+                </div>`;
+        } else {
+            // Baris data biasa (Key: Value)
+            html += `
+                <div class="json-item">
+                    <div class="json-key">${key}</div>
+                    <div class="json-val">${val === null ? '<span class="text-muted italic">null</span>' : val}</div>
+                </div>`;
+        }
+    }
+    html += '</div>';
+    return html;
+}
+
+// Fungsi Trigger Buka-Tutup Sub
+function toggleNested(btn) {
+    const content = btn.nextElementSibling;
+    if (content.style.display === "block") {
+        content.style.display = "none";
+        btn.innerText = "+ " + btn.innerText.substring(2);
+    } else {
+        content.style.display = "block";
+        btn.innerText = "- " + btn.innerText.substring(2);
+    }
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const rawText = event.target.result;
+            const jsonStart = rawText.indexOf('{"currentPage"');
+            const data = JSON.parse(rawText.substring(jsonStart));
+            
+            const table = $('#mainTable').DataTable({
+                data: data.rows,
+                destroy: true,
+                columns: [
+                    {
+                        className: 'dt-control',
+                        orderable: false,
+                        data: null,
+                        render: () => '<button class="btn btn-primary btn-sm btn-main-detail">Detail</button>'
+                    },
+                    { data: 'ID' },
+                    { data: 'Employee.Name', defaultContent: '<i>Tidak ada nama</i>' },
+                    { data: 'Username' },
+                    { data: 'Employee.Company.Name', defaultContent: '-' },
+                    { 
+                        data: 'Active',
+                        render: d => d === 1 ? '<span class="badge-active">Aktif</span>' : '<span class="badge-inactive">Non-Aktif</span>'
+                    }
+                ],
+                order: [[1, 'asc']]
+            });
+
+            // Logic untuk baris utama
+            $('#mainTable tbody').on('click', 'td.dt-control', function () {
+                let tr = $(this).closest('tr');
+                let row = table.row(tr);
+
+                if (row.child.isShown()) {
+                    row.child.hide();
+                    $(this).find('button').text('Detail').removeClass('btn-danger').addClass('btn-primary');
+                } else {
+                    // Masukkan seluruh data objek ke dalam generator UI
+                    let detailHtml = `<div class="sub-row-wrapper">${generateNestedUI(row.data())}</div>`;
+                    row.child(detailHtml).show();
+                    $(this).find('button').text('Tutup').removeClass('btn-primary').addClass('btn-danger');
+                }
+            });
+
+            $('#uploadZone').hide();
+            $('#tableContainer').show();
+
+        } catch (err) {
+            alert("Error memproses file. Pastikan file berisi data JSON yang valid.");
+        }
+    };
+    reader.readAsText(file);
+});
+</script>
+
+</body>
+</html>
