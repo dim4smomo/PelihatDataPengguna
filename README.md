@@ -1,2 +1,2 @@
 # PelihatDataPengguna
-Untuk melihat Data Pengguna secara gampang
+Untuk melihat Data Pengguna
